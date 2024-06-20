@@ -2,25 +2,52 @@ local M = {}
 
 local config = require("denote-fzf-lua.config")
 local fzflua = require('fzf-lua')
+local builtin = require("fzf-lua.previewer.builtin")
 
----@param options table of user options
---- Check for dependencies and optional dependencies
-function M.has_prereqs(options)
+--- fzf-lua custom previewer (recombines search result fields into a filename)
+M.recombine_previewer = builtin.buffer_or_file:extend()
+
+function M.recombine_previewer:new(o, opts, fzf_win)
+  M.recombine_previewer.super.new(self, o, opts, fzf_win)
+  setmetatable(self, M.recombine_previewer)
+  return self
+end
+
+function M.recombine_previewer:parse_entry(entry_str)
+  local path = entry_str:match("([^:]+:%d%d:[^:]+):?")
+  return {
+    path = M.recombine_filename(path),
+    line = 1,
+    col = 1,
+  }
+end
+
+function M.copy_table(table)
+  local new_table = {}
+  for k, v in pairs(table) do
+    new_table[k] = v
+  end
+  return new_table
+end
+
+---@param force_slow bool - If true, act as if we don't have dependencies
+---Check for dependencies and optional dependencies
+function M.has_prereqs(force_slow)
   if vim.fn.executable('fzf') ~= 1 then return "no" end
-  if options.force_slow_mode       then return "partial" end
+  if force_slow                    then return "partial" end
   if vim.fn.executable('fd')  ~= 1 then return "partial" end
   if vim.fn.executable('sd')  ~= 1 then return "partial" end
   if vim.fn.executable('qsv') ~= 1 then return "partial" end
   return "yes"
 end
 
----@param options table of user options
---- Sets the full path of the appropriate search script (regular or fallback)
-function M.set_script_path(options)
+---@param force_slow bool - If true, act as if we don't have dependencies
+---Sets the full path of the appropriate search script (regular or fallback)
+function M.set_script_path(force_slow)
   local lua_file_path = debug.getinfo(1, "S").source:sub(2)
   local lua_file_dir = vim.fn.fnamemodify(lua_file_path, ":h")
   local script_path = lua_file_dir .. "/denote-fzf-lua/scripts/"
-  local dependencies = M.has_prereqs(options)
+  local dependencies = M.has_prereqs(force_slow)
   if dependencies == "yes" then
     script_path = script_path .. "search_files.sh"
   elseif dependencies == "partial" then
@@ -38,103 +65,65 @@ function M.format_fzf_with_nth(options)
   local fzf_with_nth = ""
   local fields = {"path", "date", "time", "sig", "title", "tags", "ext" }
   for i, v in ipairs(fields) do
-      if options.fzf.search_fields[v] then
+      if options.search_fields[v] then
           fzf_with_nth = fzf_with_nth .. i .. ','
       end
   end
   return fzf_with_nth:sub(1, -2)
 end
 
----@param filename chopped up string with fields separated by |
+---@param f string - Field from search result
+---@param delim delimiter character
+---Puts a field from the search results back into Denote format (e.g. two words to --two-words)
+function M.repopulate_field(f, delim)
+  if f == "." then 
+    return ""
+  else
+    return delim .. delim .. f:gsub("%s",delim)
+  end
+end
+
+---@param filename chopped up string with fields separated by multiple spaces
 function M.recombine_filename(filename)
+  vim.print(filename)
   local t = {}
   filename = filename:gsub("%s%s+", "|")
   t.path, t.year, t.month, t.day, t.hour, t.min, t.sec, t.sig, t.title, t.tags, t.ext =
     filename:match("^(.*/)|(%d%d%d%d)%-(%d%d)%-(%d%d)|(%d%d):(%d%d):(%d%d)|([^|]+)|([^|]+)|([^|]+)|(%..+)")
-  if t.sig   == "." then
-    t.sig   = ""
-  else
-    t.sig = "==" .. t.sig:gsub("%s", "=")
-  end
-  if t.title == "." then
-    t.title = ""
-  else
-    t.title = "--" .. t.title:gsub("%s", "-")
-  end
-  if t.tags  == "." then
-    t.tags  = ""
-  else
-    t.tags = "__" .. t.tags:gsub("%s", "_")
-  end
+  t.sig   = M.repopulate_field(t.sig,"=")
+  t.title = M.repopulate_field(t.title,"-")
+  t.tags  = M.repopulate_field(t.tags,"_")
   return t.path .. t.year .. t.month .. t.day .. "T" .. t.hour .. t.min .. t.sec .. t.sig .. t.title .. t.tags .. t.ext
-end
-
---- Sets fzf preview to bat or cat depending on program availability
-function M.set_preview_program()
-  if vim.fn.executable('bat') == 1 then
-    return "xargs bat -p --color=always"
-  else
-    return "xargs cat"
-  end
-end
-
--- Sets fzf preview for contents search. $file is the filename, $line is the rg match line.
-function M.set_rg_preview()
-  if vim.fn.executable('bat') == 1 then
-    return "bat $file -p --color=always --highlight-line=$line"
-  else
-    return "cat $file"
-  end
 end
 
 ---@param options table of user options
 ---Opens a window to search filenames
 function M.search_files(options)
-  script_path = M.set_script_path(options)
+  script_path = M.set_script_path(options.force_slow_mode)
   if not script_path then return end
-  options.fzf.opts["--with-nth"] = M.format_fzf_with_nth(options)
-  options.fzf.opts['--header-lines'] = 1
-  fzflua.fzf_exec(script_path .. " " .. options.dir, 
-    {
-      preview = options.fzf.preview .. M.set_preview_program(),
-      -- selected[1] is the chopped up filename with 2+ spaces between fields
-      actions = { ['default'] = function(selected, opts)
-          local filename = M.recombine_filename(selected[1])
-          vim.api.nvim_command('edit ' .. filename)
-        end},
-      fzf_opts = options.fzf.opts,
-    })
+  local opts = {}
+  opts.previewer = M.recombine_previewer
+  opts.fzf_opts = M.copy_table(options.fzf_lua_opts.fzf_opts)
+  opts.fzf_opts["--with-nth"] = M.format_fzf_with_nth(options)
+  opts.fzf_opts['--header-lines'] = 1
+  opts.fzf_opts['--delimiter'] = "\\s{2,}"
+  opts.actions = {
+    ['default'] = function(selected, opts)
+        local filename = M.recombine_filename(selected[1])
+        vim.api.nvim_command('edit ' .. filename)
+      end }
+  fzflua.fzf_exec(script_path .. " " .. options.dir, opts)
 end
 
----@param f string returned from rg. "/path/filename:line..."
-function M.open_file_at_line(f)
-  local filename, line = f:match("^(.-):(%d+)")
-  vim.api.nvim_command('edit +' .. line .. " " .. filename)
-end
-
----@param options table
+--- Performs a standard rg search
 function M.search_contents(options)
-  local r = fzflua.fzf_live("rg " .. options.rg.opts .. " -- <query> " .. options.dir .. " 2>/dev/null",
-    {
-      preview = options.rg.fzf.preview .. M.set_rg_preview(),
-      actions = { ['default'] = function(selected, opts)
-        local filename_line = selected[1]
-        filename_line = filename_line .. ":1" --Default :1 in case no line returned
-        M.open_file_at_line(filename_line)
-      end},
-      fzf_opts = options.rg.fzf.opts,
-    })
-end
-
-function M.search2(options)
-  opts = {}
-  opts.prompt = "> "
-  opts.actions = fzflua.defaults.actions.files
+  local opts = {}
+  opts.cwd       = options.dir
   opts.previewer = "builtin"
-  opts.cwd = options.dir
-  opts.fzf_opts = options.rg.fzf.opts
+  opts.fzf_opts  = options.fzf_lua_opts.fzf_opts
+  opts.actions   = fzflua.defaults.actions.files
   return fzflua.fzf_live(function(q)
-    return "rg --column --color=always -- " .. vim.fn.shellescape(q or '')
+    return "rg --column --color=always -i -- " .. vim.fn.shellescape(q or '')
   end, opts)
 end
 
@@ -145,7 +134,7 @@ function M.load_cmd(options)
     if opts.fargs[1] == "files" then
       M.search_files(options)
     elseif opts.fargs[1] == "contents" then
-      M.search2(options)
+      M.search_contents(options)
     else
       error("Unsupported operation " .. opts.fargs[1])
     end
@@ -160,7 +149,7 @@ end
 ---@param options? table user configuration
 function M.setup(options)
   options = vim.tbl_deep_extend("force", config.defaults, options or {})
-  fzflua.setup({ winopts = options.winopts })
+  fzflua.setup(options.fzf_lua_opts)
   M.load_cmd(options)
 end
 

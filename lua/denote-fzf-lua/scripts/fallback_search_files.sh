@@ -6,21 +6,6 @@ tr '\=\-_' ' ' |\
 sed -E 's/([0-9][0-9][0-9][0-9])([0-9][0-9])([0-9][0-9])T([0-9][0-9])([0-9][0-9])([0-9][0-9])/\1-\2-\3,\4:\5:\6/' |\
 sed 's/,,/,.,/g' |\
 column -t -s "," -N Path,Date,Time,Sig,Title,Tags,Ext
-# fzf --delimiter='\s{2,}' --header-lines=1 -i $2 --preview='\
-# sig={4};   sig=$(echo   $sig   | tr -d . | tr " " =); if [ ! -z ${sig} ]   ; then sig="==${sig}";     fi; \
-# title={5}; title=$(echo $title | tr -d . | tr " " -); if [ ! -z ${title} ] ; then title="--${title}"; fi; \
-# tags={6};  tags=$(echo  $tags  | tr -d . | tr " " _); if [ ! -z ${tags} ]  ; then tags="__${tags}";   fi; \
-# ext={7}; \
-# echo {1}\|{2}\|{3}\|{4}\|{5}\|{6}\|{7} |\
-# sed -E "s/^(.*\/)?\|([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])\|([0-9][0-9]):([0-9][0-9]):([0-9][0-9])\|.*/\1\2\3\4T\5\6\7$sig$title$tags$ext/" |\
-# xargs cat' \
-# --bind='enter:become(\
-# sig={4};   sig=$(echo   $sig   | tr -d . | tr " " =); if [ ! -z ${sig} ]   ; then sig="==${sig}";     fi; \
-# title={5}; title=$(echo $title | tr -d . | tr " " -); if [ ! -z ${title} ] ; then title="--${title}"; fi; \
-# tags={6};  tags=$(echo  $tags  | tr -d . | tr " " _); if [ ! -z ${tags} ]  ; then tags="__${tags}";   fi; \
-# ext={7}; \
-# echo {1}\|{2}\|{3}\|{4}\|{5}\|{6}\|{7} | \
-# sed -E "s/^(.*\/)?\|([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])\|([0-9][0-9]):([0-9][0-9]):([0-9][0-9])\|.*/\1\2\3\4T\5\6\7$sig$title$tags$ext/")+abort'
 
 # 1. find everything in directory
 # 2. sed deletes every line that isn't a Denote note (can't do this with find alone because -regex can't match optional capture groups)

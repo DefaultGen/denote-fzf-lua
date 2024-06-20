@@ -1,33 +1,94 @@
 # denote-fzf-lua
 
-Neovim plugin that uses `fzf-lua` to search a directory of notes formatted with the Emacs Denote file-naming scheme:
+Neovim plugin that uses [`fzf-lua`](https://github.com/ibhagwan/fzf-lua) to search a directory of notes formatted with the Emacs Denote file-naming scheme:
 
 `DATE==SIGNATURE--TITLE__KEYWORDS.EXTENSION`
 
-The nice custom table for Denote files is the only unique 'feature' of this plugin. If you don't care about that you should just use `fzf-lua` on its own.
+The nice custom table for Denote files is the only unique feature of this plugin. If you don't care about that you should just configure `fzf-lua` alone however you like it.
+
+# Installation / Config
+
+Example config via [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+```lua
+{
+  "DefaultGen/denote-fzf-lua",
+  opts = {
+    dir = "~/notes" -- Denote notes directory
+
+    -- Toggle which Denote fields are displayed in search
+    search_fields = {
+      path  = false,
+      date  = true,
+      time  = false,
+      sig   = false,
+      title = true,
+      tags  = true,
+      ext   = false,
+    },
+
+    -- OPTIONAL:
+    -- fzf-lua plugin options. Check fzf-lua docs for full details.
+    -- Use this to set custom window and fzf options (and more)
+    fzf_lua_opts = {
+      winopts = {
+        height = 0.85,
+        width  = 0.80,
+        row    = 0.35,
+        col    = 0.50,
+        preview = {
+          layout = 'vertical',   -- vertical, horizontal, or flex
+          vertical = 'down:45%', -- Alt: horizontal = 'right:50%'
+        },
+      },
+      -- Options sent to fzf. If you don't include these, it will be
+      -- set to the defaults below (which look like the screenshot)
+      fzf_opts = {
+        ['--reverse'] = true,
+        ['--no-info'] = true,
+        ['--no-separator'] = true,
+        ['--no-hscroll'] = true,
+        ['-i'] = true,
+      },
+    },
+  },
+},
+```
 
 ## Dependencies
 
-* `fzf`            - Fuzzy finder
-* `ripgrep`        - Fast `grep` replacement
-* `fd`  (OPTIONAL) - Fast `find` replacement
-* `sd`  (OPTIONAL) - Fast `sed` replacement
-* `qsv` (OPTIONAL) - Fast `column` replacement
+* [`ibhagwan/fzf-lua`](https://github.com/ibhagwan/fzf-lua) - Neovim plugin
+* `fzf` - Fuzzy finder
+* (OPTIONAL) `fd` - Fast `find` replacement
+* (OPTIONAL) `sd` - Fast `sed` replacement
+* (OPTIONAL) `qsv`- Fast `column` replacement
+* (OPTIONAL) `bat` - Nicer preview than `cat`
+* (OPTIONAL) `ripgrep` - Required to search note contents
 
 ```
-Arch Linux: sudo pacman -S fzf ripgrep fd sd
+Arch Linux: sudo pacman -S fzf ripgrep fd sd bat
             yay -S qsv-bin
 
-Debian: sudo apt install fzf ripgrep fd sd
+Debian: sudo apt install fzf ripgrep fd-find sd bat
+        export PATH=/usr/lib/cargo/bin/:$PATH (to add `fd` to path)
 
-qsv is available here: https://github.com/jqnatividad/qsv
+qsv: https://github.com/jqnatividad/qsv
 ```
 
-If the optional dependencies are missing `denote-fzf-lua` falls back to standard Unix tools.
-
-As a rough benchmark, the Rust tools can perform a search through 10k notes in 0.1s vs. 0.2s for standard tools on my PC. For 100k notes it's 0.6s vs. 2.1s.
+If the optional dependencies are missing `denote-fzf-lua` falls back to standard Unix tools. The Rust tools are 2-3x faster. On my PC this is a difference of 0.1s vs 0.2s for 10k notes, or 0.6s vs 1.9s for 100k notes.
 
 `qsv` is used over the smaller, more ubiquitous `xsv` because it can table format very large inputs (e.g. 100k notes) without errors.
+
+# :DenoteSearch command
+
+```vim
+" Searches filenames in `dir` with fzf and displays results as a table
+:DenoteSearch files
+
+" Standard rg search through file contents in `dir`.
+" Nothing special about this, it's just a convenient command that uses the same fzf-lua options
+:DenoteSearch contents
+```
 
 # License
 
