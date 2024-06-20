@@ -63,7 +63,7 @@ end
 ---Format the --with-nth argument for fzf (which fields are shown)
 function M.format_fzf_with_nth(options)
   local fzf_with_nth = ""
-  local fields = {"path", "date", "time", "sig", "title", "tags", "ext" }
+  local fields = {"path", "date", "time", "sig", "title", "keywords", "ext" }
   for i, v in ipairs(fields) do
       if options.search_fields[v] then
           fzf_with_nth = fzf_with_nth .. i .. ','
@@ -88,12 +88,12 @@ function M.recombine_filename(filename)
   vim.print(filename)
   local t = {}
   filename = filename:gsub("%s%s+", "|")
-  t.path, t.year, t.month, t.day, t.hour, t.min, t.sec, t.sig, t.title, t.tags, t.ext =
+  t.path, t.year, t.month, t.day, t.hour, t.min, t.sec, t.sig, t.title, t.keywords, t.ext =
     filename:match("^(.*/)|(%d%d%d%d)%-(%d%d)%-(%d%d)|(%d%d):(%d%d):(%d%d)|([^|]+)|([^|]+)|([^|]+)|(%..+)")
-  t.sig   = M.repopulate_field(t.sig,"=")
-  t.title = M.repopulate_field(t.title,"-")
-  t.tags  = M.repopulate_field(t.tags,"_")
-  return t.path .. t.year .. t.month .. t.day .. "T" .. t.hour .. t.min .. t.sec .. t.sig .. t.title .. t.tags .. t.ext
+  t.sig       = M.repopulate_field(t.sig,"=")
+  t.title     = M.repopulate_field(t.title,"-")
+  t.keywords  = M.repopulate_field(t.keywords,"_")
+  return t.path .. t.year .. t.month .. t.day .. "T" .. t.hour .. t.min .. t.sec .. t.sig .. t.title .. t.keywords .. t.ext
 end
 
 ---@param options table of user options

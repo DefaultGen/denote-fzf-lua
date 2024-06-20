@@ -6,13 +6,13 @@ M.defaults = {
 
   -- Choose which fields appear in search results
   search_fields = {
-      path  = false,
-      date  = true,
-      time  = false,
-      sig   = false,
-      title = true,
-      tags  = true,
-      ext   = false,
+      path      = false,
+      date      = true,
+      time      = false,
+      sig       = false,
+      title     = true,
+      keywords  = true,
+      ext       = false,
   },
 
   -- Settings for fzf-lua. See fzf-lua doc for full list of options

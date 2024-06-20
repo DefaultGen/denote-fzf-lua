@@ -20,13 +20,13 @@ Example config via [lazy.nvim](https://github.com/folke/lazy.nvim)
 
     -- Toggle which Denote fields are displayed in search
     search_fields = {
-      path  = false,
-      date  = true,
-      time  = false,
-      sig   = false,
-      title = true,
-      tags  = true,
-      ext   = false,
+      path      = false,
+      date      = true,
+      time      = false,
+      sig       = false,
+      title     = true,
+      keywords  = true,
+      ext       = false,
     },
 
     -- OPTIONAL:
