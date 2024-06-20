@@ -6,6 +6,8 @@ Neovim plugin that uses [`fzf-lua`](https://github.com/ibhagwan/fzf-lua) to sear
 
 The nice custom table for Denote files is the only unique feature of this plugin. If you don't care about that you should just configure `fzf-lua` alone however you like it.
 
+![](https://i.imgur.com/HTufRAC.png)
+
 # Installation / Config
 
 Example config via [lazy.nvim](https://github.com/folke/lazy.nvim)
@@ -61,7 +63,7 @@ Example config via [lazy.nvim](https://github.com/folke/lazy.nvim)
 * `fzf` - Fuzzy finder
 * (OPTIONAL) `fd` - Fast `find` replacement
 * (OPTIONAL) `sd` - Fast `sed` replacement
-* (OPTIONAL) `qsv`- Fast `column` replacement
+* (OPTIONAL) [`qsv`](https://github.com/jqnatividad/qsv)- Fast `column` replacement
 * (OPTIONAL) `bat` - Nicer preview than `cat`
 * (OPTIONAL) `ripgrep` - Required to search note contents
 
@@ -71,8 +73,7 @@ Arch Linux: sudo pacman -S fzf ripgrep fd sd bat
 
 Debian: sudo apt install fzf ripgrep fd-find sd bat
         export PATH=/usr/lib/cargo/bin/:$PATH (to add `fd` to path)
-
-qsv: https://github.com/jqnatividad/qsv
+        Install qsv from Github
 ```
 
 If the optional dependencies are missing `denote-fzf-lua` falls back to standard Unix tools. The Rust tools are 2-3x faster. On my PC this is a difference of 0.1s vs 0.2s for 10k notes, or 0.6s vs 1.9s for 100k notes.
