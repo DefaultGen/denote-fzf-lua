@@ -6,7 +6,7 @@ Neovim plugin that uses [`fzf-lua`](https://github.com/ibhagwan/fzf-lua) to sear
 
 The nice custom table for Denote files is the only unique feature of this plugin. If you don't care about that you should just configure `fzf-lua` alone however you like it.
 
-![](https://i.imgur.com/HTufRAC.png)
+![](https://i.imgur.com/1lTDhOz.png)
 
 # Installation / Config
 
