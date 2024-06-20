@@ -1,13 +1,18 @@
 local M = {}
 
 M.defaults = {
-  dir = "~/notes", 
-  window = {
-    width_percent = 80,
-    height_percent = 80,
-    x_offset = 0,
-    y_offset = 0,
+  dir = "~/notes",
+  force_slow_mode = false, -- Disables optional dependencies
+
+  -- Set any fzf-lua winopts here (See fzf-lua documentation)
+  winopts = {
+    height = 0.85,
+    width  = 0.80,
+    row    = 0.35,
+    col    = 0.50,
   },
+
+  -- Options sent to fzf (only relevant for filename search)
   fzf = {
     opts = {
       ['--reverse'] = true,
@@ -16,9 +21,9 @@ M.defaults = {
       ['--no-hscroll'] = true,
       ['--preview-window'] = "bottom:50%",
       ['-i'] = true,
-      ['--delimiter'] = "\\s{2,}",
-      ['--header-lines'] = 1
+      ['--delimiter'] = "\\s{2,}", -- Don't change this, change search_fields.
     },
+    -- Which Denote fields are displayed in the search results
     search_fields = {
       path  = false,
       date  = true,
@@ -28,23 +33,33 @@ M.defaults = {
       tags  = true,
       ext   = false,
     },
-    -- This recombines the chopped up filename from ./scripts/search_files.sh and outputs it to cat
-    -- TODO: Rewrite this with a lua function
-    preview = [[\
-sig={4};   sig=$(echo   $sig   | sd "\W" "" | sd " " "="); if [ ! -z ${sig} ]   ; then sig="==${sig}";     fi; \
-title={5}; title=$(echo $title | tr -d '.'  | tr ' ' '-'); if [ ! -z ${title} ] ; then title="--${title}"; fi; \
-tags={6};  tags=$(echo  $tags  | tr -d '.'  | tr ' ' '_'); if [ ! -z ${tags} ]  ; then tags="__${tags}";   fi; \
-ext={7}; \
-echo {1}\|{2}\|{3}\|{4}\|{5}\|{6}\|{7} | \
-sd "(?P<path>\/.*\/)?\|(?P<d1>\d\d\d\d)-(?P<d2>\d\d)-(?P<d3>\d\d)\|(?P<t1>\d\d):(?P<t2>\d\d):(?P<t3>\d\d)\|.*" "\$path\$d1\$d2\${d3}T\$t1\$t2\$t3$sig$title$tags$ext" |\
-xargs cat]],
-    -- selected[1] is the chopped up filename with 2+ spaces between fields
-    actions = {
-      ['default'] = function(selected, opts)
-          require'denote-fzf-lua'.open_file(selected[1])
-        end
-    }
-  }
+    -- This recombines the chopped up filename from ./scripts/search_files.sh. The output needs to be piped to xargs bat or xargs cat.
+    preview = [[date={2};time={3};  datetime=$(echo ${date}T${time} | tr -d '\-:'); \
+      sig={4};   sig=$(echo   $sig   | tr -d '.' | tr " " "="); if [ ! -z ${sig} ]   ; then sig="==${sig}";     fi; \
+      title={5}; title=$(echo $title | tr -d '.' | tr ' ' '-'); if [ ! -z ${title} ] ; then title="--${title}"; fi; \
+      tags={6};  tags=$(echo  $tags  | tr -d '.' | tr ' ' '_'); if [ ! -z ${tags} ]  ; then tags="__${tags}";   fi; \
+      ext={7}; \
+      echo {1}${datetime}${sig}${title}${tags}${ext} | ]],
+  },
+  -- Options for ripgrep (Only relevant for contents search)
+  rg = {
+    opts = "--column --color=always",
+    fzf = {
+      opts = {
+        ['--reverse'] = true,
+        ['--no-info'] = true,
+        ['--no-separator'] = true,
+        ['--no-hscroll'] = true,
+        ['--preview-window'] = 'bottom:50%',
+        ['-i'] = true,
+      },
+      -- Checks if $line=$file in case rg --files is used and doesn't return a line number
+      -- This currently does nothing until I figure out if there's a good way to chop up filenames in the rg search
+      preview = "file=$(echo {} | cut -d ':' -f1); \
+        line=$(echo {} | cut -d ':' -f2); \
+        if [ \"$line\" = \"$file\" ] ; then line=0; fi;",
+    },
+  },
 }
 
 M.options = M.defaults
